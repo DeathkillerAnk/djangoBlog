@@ -5,6 +5,6 @@
 		}
 	],
 	"settings": {
-		"python.pythonPath": "local/bin/python"
+		"python.pythonPath": "venv/bin/python2.7"
 	}
 }
