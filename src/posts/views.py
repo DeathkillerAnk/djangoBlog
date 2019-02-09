@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
 #from __future__ import unicode_literals
 from urllib import quote_plus
-from django.shortcuts import render, get_object_or_404, redirect
+
 from django.contrib import messages
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db.models import Q
 from django.http import HttpResponse, HttpResponseRedirect, Http404
+from django.shortcuts import render, get_object_or_404, redirect
+from django.utils import timezone
+#from django.core.urlresolvers import reverse
+
 from .models import Post
 from .forms import PostForm
-from django.core.urlresolvers import reverse
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.utils import timezone
 # Create your views here.
 
 
@@ -50,11 +53,22 @@ def post_detail(request, slug=None):
     return render(request,"post_detail.html", context)
 
 def post_list(request):
+    today = timezone.now().date()
     queryset_list = Post.objects.active()#.order_by("-timestamp")
     if request.user.is_staff or request.user.is_superuser:
         queryset_list = Post.objects.all()
-    paginator = Paginator(queryset_list,10)
-    page = request.GET.get('page')
+
+    query=request.GET.get("q")
+    if query:
+        queryset_list = queryset_list.filter(
+            Q(title__icontains=query) |
+            Q(content__icontains=query) |
+            Q(user__first_name__icontains=query)|
+            Q(user__last_name__icontains=query) 
+        ).distinct()
+    paginator = Paginator(queryset_list,5)
+    page_request_var="page"
+    page = request.GET.get(page_request_var)
     try:
         queryset = paginator.page(page)
     except PageNotAnInteger:
@@ -64,7 +78,9 @@ def post_list(request):
 
     context_data = {
         "object_list" : queryset,
-        "title" : "List"
+        "title" : "List",
+        "page_request_var":page_request_var,
+        "today":today,
     }
     return render(request, "post_list.html",context_data)
 
